@@ -1,1 +1,83 @@
+-- Active/Inactive Employee Count
+SELECT 
+    COUNT(*) AS total_employees,
+    SUM(is_active) AS active_employees,
+    COUNT(*) - SUM(is_active) AS inactive_employees,
+    ROUND((COUNT(*) - SUM(is_active)) * 100.0 / COUNT(*), 2) AS turnover_rate_percent
+FROM employees;
+
+
+
+
+
+
+-- Compensation by Role
+SELECT 
+    role,
+    COUNT(*) AS employee_count,
+    ROUND(AVG(current_compensation), 2) AS avg_salary,
+    ROUND(MIN(current_compensation), 2) AS min_salary,
+    ROUND(MAX(current_compensation), 2) AS max_salary
+FROM employees
+WHERE is_active = 1
+GROUP BY role
+ORDER BY avg_salary DESC;
+
+
+
+
+
+--Experience vs. Compensation
+SELECT 
+    years_experience,
+    COUNT(*) AS employee_count,
+    ROUND(AVG(current_compensation), 2) AS avg_salary
+FROM employees
+WHERE is_active = 1
+GROUP BY years_experience
+ORDER BY 
+    CAST(SUBSTR(years_experience, 1, INSTR(years_experience, '-') - 1) AS INTEGER);
+
+
+
+
+
+
+-- Location-Based Insights
+SELECT 
+    location,
+    COUNT(*) AS total_employees,
+    ROUND(AVG(current_compensation), 2) AS avg_salary,
+    ROUND(AVG(CASE WHEN is_active = 0 THEN current_compensation ELSE NULL END), 2) AS avg_salary_departed
+FROM employees
+GROUP BY location;
+
+
+
+
+
+
+SELECT TOP 10 * FROM Employees;
+SELECT TOP 10 * FROM Roles; 
+SELECT TOP 10 * FROM Locations;
+SELECT TOP 10 * FROM IndustryCompensation;
+
+
+
+
+
+
+--For roles with compensation benchmarks:
+SELECT 
+    role,
+    location,
+    years_experience,
+    current_compensation,
+    CASE 
+        WHEN is_active = 1 THEN 'Active'
+        ELSE 'Inactive'
+    END AS status
+FROM employees
+ORDER BY role, location;
+
 
