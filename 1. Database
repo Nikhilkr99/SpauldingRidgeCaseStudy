@@ -27,19 +27,65 @@ CREATE TABLE employee_ratings (
 );
 
 
+
+
 -- Filter employees by role/location
+
 CREATE PROCEDURE FilterEmployees(
-    target_role TEXT DEFAULT NULL, 
-    target_location TEXT DEFAULT NULL
+    role_filter TEXT DEFAULT NULL, 
+    location_filter TEXT DEFAULT NULL,
+    include_inactive BOOLEAN DEFAULT FALSE
 )
+AS
+BEGIN
+    SELECT e.Name, r.RoleName, l.LocationName, e.CurrentCompensation
+    FROM employees e
+    JOIN Roles r ON e.RoleID = r.RoleID
+    JOIN Locations l ON e.LocationID = l.LocationID
+    WHERE (r.RoleName = role_filter OR role_filter IS NULL)
+      AND (l.LocationName = location_filter OR location_filter IS NULL)
+      AND (e.IsActive = 1 OR include_inactive = TRUE);
+END;
+
+
+
+
+
+
+-- Calculate Average Compensation by Location:
+CREATE PROCEDURE AvgCompByLocation(location_name TEXT)
+AS
+BEGIN
+    SELECT AVG(e.CurrentCompensation) AS AvgComp
+    FROM employees e
+    JOIN Locations l ON e.LocationID = l.LocationID
+    WHERE l.LocationName = location_name AND e.IsActive = 1;
+END;
+
+
+
+
+
+
+-- Simulate Compensation Adjustments:
+CREATE PROCEDURE SimulateIncrement(
+    global_increment_pct REAL,
+    role_filter TEXT DEFAULT NULL,
+    role_increment_pct REAL DEFAULT NULL
+)
+AS
 BEGIN
     SELECT 
-        name,
-        role,
-        location,
-        current_compensation
-    FROM employees
-    WHERE (role = target_role OR target_role IS NULL)
-      AND (location = target_location OR target_location IS NULL)
-      AND is_active = 1;
+        e.Name,
+        r.RoleName,
+        e.CurrentCompensation,
+        e.CurrentCompensation * (1 + 
+            CASE 
+                WHEN r.RoleName = role_filter THEN role_increment_pct/100 
+                ELSE global_increment_pct/100 
+            END) AS NewCompensation
+    FROM employees e
+    JOIN Roles r ON e.RoleID = r.RoleID
+    WHERE e.IsActive = 1;
 END;
+
