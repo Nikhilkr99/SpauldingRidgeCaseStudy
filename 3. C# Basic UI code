@@ -1,0 +1,124 @@
+using System;
+using System.Data;
+using System.Data.SQLite;
+using System.Windows.Forms;
+using System.Windows.Forms.DataVisualization.Charting;
+
+namespace CompensationForecastTool
+{
+    public partial class MainForm : Form
+    {
+        private string connectionString = @"Data Source=your_database.db;Version=3;";
+
+        public MainForm()
+        {
+            InitializeComponent();
+            LoadRolesLocations();
+        }
+
+        // Load dropdowns with unique roles/locations
+        private void LoadRolesLocations()
+        {
+            using (SQLiteConnection conn = new SQLiteConnection(connectionString))
+            {
+                conn.Open();
+                SQLiteCommand cmd = new SQLiteCommand("SELECT DISTINCT role FROM employees", conn);
+                SQLiteDataReader reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    cmbRole.Items.Add(reader["role"]);
+                }
+
+                cmd.CommandText = "SELECT DISTINCT location FROM employees";
+                reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    cmbLocation.Items.Add(reader["location"]);
+                }
+            }
+        }
+
+        // Filter employees
+        private void btnFilter_Click(object sender, EventArgs e)
+        {
+            string query = @"
+                SELECT name, role, location, current_compensation 
+                FROM employees 
+                WHERE is_active = 1 
+                  AND (@role IS NULL OR role = @role)
+                  AND (@location IS NULL OR location = @location)";
+
+            using (SQLiteConnection conn = new SQLiteConnection(connectionString))
+            {
+                SQLiteDataAdapter da = new SQLiteDataAdapter(query, conn);
+                da.SelectCommand.Parameters.AddWithValue("@role", 
+                    cmbRole.SelectedItem?.ToString() ?? null);
+                da.SelectCommand.Parameters.AddWithValue("@location", 
+                    cmbLocation.SelectedItem?.ToString() ?? null);
+
+                DataTable dt = new DataTable();
+                da.Fill(dt);
+                dataGridView1.DataSource = dt;
+            }
+        }
+
+        // Forecast compensation
+        private void btnForecast_Click(object sender, EventArgs e)
+        {
+            decimal raisePercent = numRaisePercent.Value;
+            string query = @"
+                SELECT 
+                    name,
+                    role,
+                    current_compensation,
+                    current_compensation * (1 + @raise/100) AS forecasted_comp
+                FROM employees
+                WHERE is_active = 1";
+
+            using (SQLiteConnection conn = new SQLiteConnection(connectionString))
+            {
+                SQLiteDataAdapter da = new SQLiteDataAdapter(query, conn);
+                da.SelectCommand.Parameters.AddWithValue("@raise", raisePercent);
+
+                DataTable dt = new DataTable();
+                da.Fill(dt);
+                dataGridView1.DataSource = dt;
+
+                // Show chart
+                chart1.Series.Clear();
+                Series series = new Series("Compensation");
+                series.ChartType = SeriesChartType.Bar;
+
+                foreach (DataRow row in dt.Rows)
+                {
+                    series.Points.AddXY(
+                        row["name"].ToString(),
+                        Convert.ToDouble(row["forecasted_comp"]));
+                }
+                chart1.Series.Add(series);
+            }
+        }
+
+        // Export to CSV
+        private void btnExport_Click(object sender, EventArgs e)
+        {
+            if (dataGridView1.DataSource != null)
+            {
+                SaveFileDialog saveFile = new SaveFileDialog();
+                saveFile.Filter = "CSV file|*.csv";
+                if (saveFile.ShowDialog() == DialogResult.OK)
+                {
+                    DataTable dt = (DataTable)dataGridView1.DataSource;
+                    // Simple CSV export logic
+                    System.IO.File.WriteAllText(
+                        saveFile.FileName,
+                        string.Join(",", dt.Columns.Cast<DataColumn>().Select(c => c.ColumnName)) + 
+                        Environment.NewLine +
+                        string.Join(Environment.NewLine,
+                            dt.Rows.Cast<DataRow>().Select(row => 
+                                string.Join(",", row.ItemArray))));
+                }
+            }
+        }
+    }
+}
