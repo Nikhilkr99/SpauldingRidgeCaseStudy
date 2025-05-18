@@ -1,0 +1,45 @@
+-- 1. Employees
+CREATE TABLE IF NOT EXISTS employees (
+    name TEXT,
+    role TEXT,
+    location TEXT,
+    years_experience TEXT,
+    is_active INTEGER,
+    current_compensation REAL,
+    last_working_day TEXT
+);
+
+-- 2. Industry Compensation
+CREATE TABLE industry_compensation (
+    location TEXT,
+    role TEXT,
+    avg_compensation REAL
+);
+
+-- 3. Employee Ratings
+CREATE TABLE employee_ratings (
+    name TEXT,
+    role TEXT,
+    location TEXT,
+    yoe TEXT,
+    self_rating REAL,
+    manager_rating REAL
+);
+
+
+-- Filter employees by role/location
+CREATE PROCEDURE FilterEmployees(
+    target_role TEXT DEFAULT NULL, 
+    target_location TEXT DEFAULT NULL
+)
+BEGIN
+    SELECT 
+        name,
+        role,
+        location,
+        current_compensation
+    FROM employees
+    WHERE (role = target_role OR target_role IS NULL)
+      AND (location = target_location OR target_location IS NULL)
+      AND is_active = 1;
+END;
