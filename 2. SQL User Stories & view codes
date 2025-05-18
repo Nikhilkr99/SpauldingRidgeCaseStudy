@@ -1,3 +1,136 @@
+/*******************************
+ USER STORY 1: Filter and Display Active Employees by Role
+ As a user, I should be able to filter employees by Role and view compensation data
+*******************************/
+
+-- Basic role filter with compensation
+SELECT 
+    name, 
+    role, 
+    location, 
+    years_experience, 
+    current_compensation,
+    CASE WHEN is_active = 1 THEN 'Active' ELSE 'Inactive' END AS status
+FROM employees
+WHERE 
+    role = 'Analyst'  -- Replace with parameter/variable
+    AND is_active = 1  -- Active only
+ORDER BY current_compensation DESC;
+
+-- With average compensation by location
+SELECT 
+    e.name,
+    e.role,
+    e.location,
+    e.current_compensation,
+    ROUND(loc.avg_comp, 2) AS location_avg_compensation
+FROM employees e
+JOIN (
+    SELECT 
+        location, 
+        AVG(current_compensation) AS avg_comp 
+    FROM employees 
+    WHERE is_active = 1 
+    GROUP BY location
+) loc ON e.location = loc.location
+WHERE 
+    e.role = 'Senior Analyst'  -- Parameter
+    AND e.is_active = 1;
+
+/*******************************
+ USER STORY 2: Group Employees by Years of Experience
+ As a user, I should be able to view employees grouped by experience ranges
+*******************************/
+
+-- Basic experience grouping
+SELECT 
+    years_experience,
+    COUNT(*) AS employee_count,
+    ROUND(AVG(current_compensation), 2) AS avg_salary
+FROM employees
+WHERE is_active = 1
+GROUP BY years_experience
+ORDER BY 
+    CAST(SUBSTR(years_experience, 1, INSTR(years_experience, '-') - 1) AS INTEGER);
+
+-- With location breakdown
+SELECT 
+    years_experience,
+    location,
+    COUNT(*) AS employee_count,
+    ROUND(AVG(current_compensation), 2) AS avg_salary
+FROM employees
+WHERE is_active = 1
+GROUP BY years_experience, location
+ORDER BY years_experience, location;
+
+/*******************************
+ USER STORY 3: Simulate Compensation Increments
+ As a user, I should be able to simulate compensation increases
+*******************************/
+
+-- Global percentage increase (e.g., 10%)
+SELECT 
+    name,
+    role,
+    current_compensation,
+    ROUND(current_compensation * 1.10, 2) AS proposed_compensation,
+    ROUND(current_compensation * 0.10, 2) AS increase_amount
+FROM employees
+WHERE is_active = 1;
+
+-- Role-specific increases (Analysts get 15%, others 10%)
+SELECT 
+    name,
+    role,
+    current_compensation,
+    CASE 
+        WHEN role = 'Analyst' THEN ROUND(current_compensation * 1.15, 2)
+        ELSE ROUND(current_compensation * 1.10, 2)
+    END AS proposed_compensation
+FROM employees
+WHERE is_active = 1;
+
+/*******************************
+ USER STORY 4: Download Filtered Employee Data
+ As a user, I should be able to export filtered data
+*******************************/
+
+-- Example export-ready query (run this then right-click → Export CSV)
+SELECT 
+    name,
+    role,
+    location,
+    years_experience,
+    current_compensation,
+    CASE WHEN is_active = 1 THEN 'Active' ELSE 'Inactive' END AS status,
+    last_working_day
+FROM employees
+WHERE 
+    role IN ('Analyst', 'Senior Analyst')  -- Parameter
+    AND location = 'Banglore'             -- Parameter
+    AND is_active = 1                     -- Parameter
+ORDER BY role, current_compensation DESC;
+
+-- With simulated compensation (combines Story 3 & 4)
+SELECT 
+    name,
+    role,
+    location,
+    years_experience,
+    current_compensation,
+    ROUND(current_compensation * 1.10, 2) AS simulated_compensation,
+    CASE WHEN is_active = 1 THEN 'Active' ELSE 'Inactive' END AS status
+FROM employees
+WHERE years_experience = '1-2';  -- Parameter
+
+
+
+
+
+
+
+
 -- Active/Inactive Employee Count
 SELECT 
     COUNT(*) AS total_employees,
